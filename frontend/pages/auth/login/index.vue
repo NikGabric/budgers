@@ -1,5 +1,32 @@
 <script setup lang="ts">
-import { Lock, LockIcon, User } from "lucide-vue-next";
+import { LockIcon, User } from "lucide-vue-next";
+import type { LoginUserDto } from "~/stores/user";
+import { validateLoginUserDto } from "~/utils/formValidators";
+
+const loading: Ref<boolean> = ref(false);
+const username: Ref<string> = ref("");
+const password: Ref<string> = ref("");
+const validationError: Ref<string | undefined> = ref();
+const clearError = () => (validationError.value = undefined);
+
+const { login } = useUserStore();
+const handleLogin = async () => {
+  loading.value = true;
+  const loginUserDto: LoginUserDto = {
+    username: username.value,
+    password: password.value,
+  };
+  const loginDataValidation = validateLoginUserDto(loginUserDto);
+
+  if (!loginDataValidation.isSuccess) {
+    validationError.value = loginDataValidation.error?.description;
+    loading.value = false;
+    return;
+  }
+
+  await login(loginUserDto);
+  loading.value = false;
+};
 </script>
 
 <template>
@@ -11,14 +38,34 @@ import { Lock, LockIcon, User } from "lucide-vue-next";
 
       <label class="input input-bordered w-full flex items-center gap-2">
         <User />
-        <input type="text" class="grow" placeholder="Username" />
+        <input
+          type="text"
+          class="grow"
+          placeholder="Username"
+          v-model="username"
+          @input="clearError"
+        />
       </label>
       <label class="input input-bordered w-full flex items-center gap-2">
         <LockIcon />
-        <input type="password" class="grow" placeholder="Password" />
+        <input
+          type="password"
+          class="grow"
+          placeholder="Password"
+          v-model="password"
+          @input="clearError"
+        />
       </label>
 
-      <button class="btn btn-neutral">Login</button>
+      <Transition name="scale">
+        <div class="text-error" v-if="validationError">
+          {{ validationError }}
+        </div>
+      </Transition>
+
+      <button class="btn btn-neutral" @click="handleLogin" :disabled="loading">
+        Login
+      </button>
       <div>
         New user?
         <NuxtLink to="/auth/register" class="underline text-primary"
